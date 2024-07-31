@@ -3,7 +3,7 @@
 ## Ray简介
 
 + Ray 是一个并行和分布式 Python 的开源库。
-  ![ray](doc\img\ray框架.png)
+  ![ray](doc/img/ray框架.png)
   + 从高层次上看，Ray 生态系统由三部分组成：
     + 核心 Ray 系统
     + 用于机器学习的可扩展库（包括原生库和第三方库）
@@ -17,7 +17,7 @@
 ## Ray Tune 简介
 
 + Ray Tune 是一个 Python 库，用于任何规模的实验执行和超参数调整，该库的一些优点是：
-  ![tune](doc\img\tune.png)
+  ![tune](doc/img/tune.png)
   + 能够在不到 10 行代码中启动多节点分布式超参数扫描。
   + 支持包括 PyTorch 在内的所有主流机器学习框架。
   + 对 GPU 的一流支持。
