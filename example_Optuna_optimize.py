@@ -102,23 +102,29 @@ if __name__ == '__main__':
     data_dir = os.path.abspath("./data")
     load_data(data_dir)
     config = {
-        "l1": 512,  # 第一隐藏层节点数
-        "l2": 64,  # 第二隐藏层节点数
+        "l1": tune.choice([512, 256, 128]),  # 第一隐藏层节点数
+        "l2": tune.choice([64, 32, 16]),  # 第二隐藏层节点数
         "lr": tune.loguniform(0.001, 0.1),  # 学习率
         "batch_size": 64,
     }
 
     # 基于Optuna库的贝叶斯搜索（TPE/GP采样过程）
     results, best = optimize_optuna_search(
-        objective=partial(train_minst, data_dir=data_dir),
-        config=config,
-        metric="test_accuracy",
-        mode="max",
-        points_to_evaluate=None,
-        n_samples=20,
-        max_iter=10,
-        optuna_sampler='TPE',  # 采样过程，默认为TPE,可选GP
+        objective=partial(train_minst, data_dir=data_dir),  # 目标函数，partial为传递除config以外的其它参数
+        config=config,  # 目标超参数搜索空间
+        metric="test_accuracy",  # 优化目标变量
+        mode="max",  # 优化模式，可选max/min
+        points_to_evaluate=[    # 设定初始实验的超参数，前n次实验将按照如下超参数进行
+            {"l1": 128, "l2": 32, "lr": 0.08},
+            {"l1": 128, "l2": 32, "lr": 0.09},
+            {"l1": 128, "l2": 32, "lr": 0.1}
+        ],
+        n_samples=20,  # 采样点个数
+        max_iter=10,  # 最大迭代次数
+        optuna_sampler='TPE',  # 采样过程，默认为TPE（TPE优化）,可选GP（高斯过程）
         scheduler='ASHA',  # 引入的算法调度器，实现早期不良训练的淘汰
-        cpus_per_trial=1,
-        gpus_per_trial=0.2,
+        grace_period=2,  # 最小训练轮数，起始2轮后开始淘汰，2轮前ASHA不介入
+        reduce_factor=2,  # 淘汰率,即论文/伪代码中的eta
+        cpus_per_trial=1,  # 每个实验分配的cpu资源
+        gpus_per_trial=0.2,  # 每个实验分配的gpu资源
     )

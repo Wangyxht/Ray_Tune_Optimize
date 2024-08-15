@@ -42,7 +42,7 @@ def train_minst_with_checkpoint(config, data_dir=None):
     :param config: 调优参数以及待传递参数
     """
     # 实例化模型
-    minst_net = MinstNet(l1=512, l2=64)
+    minst_net = MinstNet(l1=256, l2=32)
     # 适配训练设备，测试节点是否为单机多卡
     device = "cpu"
     if torch.cuda.is_available():
@@ -130,22 +130,19 @@ if __name__ == '__main__':
     load_data(data_dir)
 
     config = {
-        "lr": tune.uniform(0.001, 0.1),
+        "lr": tune.loguniform(0.001, 0.1),
         "momentum": tune.uniform(0.1, 0.5),
     }
 
-    results = optimize_pbt_search(
-        objective=partial(train_minst_with_checkpoint, data_dir=data_dir),
-        config=config,
-        hyperparameters=config,
-        metric='test_accuracy',
-        mode='max',
-        n_samples=20,
-        max_iter=10,
-        checkpoint_keep_num=7,    # 保存的检查点
-        perturbation_interval=2,  # 突变/扰动轮数间隔
-        cpus_per_trial=1,  #
-        gpus_per_trial=0.2,
+    results, best_config = optimize_pbt_search(
+        objective=partial(train_minst_with_checkpoint, data_dir=data_dir),  # 目标函数，partial为传递除config以外的其它参数
+        config=config,  # 目标超参数搜索空间（包含常量）
+        hyperparameters=config,  # 目标超参数搜索空间（不包含常量）
+        metric='test_accuracy',  # 优化目标变量
+        mode='max',  # 优化模式，可选max/min
+        n_samples=20,  # 采样点个数
+        max_iter=10,  # 最大迭代次数
+        perturbation_interval=2,  # 进行保存模型并且交换模型的间隔轮数
+        cpus_per_trial=1,  # 每个实验分配的cpu资源
+        gpus_per_trial=0.2,  # 每个实验分配的gpu资源
     )
-
-    print("Best hyperparameters found were: ", results.get_best_result(metric="test_accuracy", mode="max"))
