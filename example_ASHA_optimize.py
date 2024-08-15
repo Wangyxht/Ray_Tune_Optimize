@@ -24,6 +24,18 @@ def load_data(data_dir="./data"):
     return train_set, test_set
 
 
+'''
+定义优化目标，基于轮数的优化测试
+基于ray tune的优化目标基本框架如下：
+def objective(config):
+    1. 使用config传入的超参数训练模型
+    2. 使用评价函数对模型进行评价
+    3. 在每轮使用tune.report告知tuner本轮的训练结果（可以是loss或者准确度）
+    使用while Ture循环训练的目的是可以使用stop={"training_iteration": epochs}告知tuner每次尝试的最大轮数
+    已经封装，只需对optimize函数传入max_iter即可
+'''
+
+
 def train_minst(config, data_dir=None):
     """
     训练MINST神经网络模型，并且报告loss与验证集上的精确度
@@ -84,6 +96,7 @@ def train_minst(config, data_dir=None):
         }
         train.report(metrics)
     # end while True
+
 
 if __name__ == '__main__':
     data_dir = os.path.abspath("./data")

@@ -39,7 +39,7 @@ def objective(config):
     2. 使用评价函数对模型进行评价
     3. 在每轮使用tune.report告知tuner本轮的训练结果（可以是loss或者准确度）
     使用while Ture循环训练的目的是可以使用stop={"training_iteration": epochs}告知tuner每次尝试的最大轮数
-    已经封装，只需对optimize传入epochs即可
+    已经封装，只需对optimize函数传入max_iter即可
 '''
 
 

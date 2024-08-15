@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from torch import nn, optim, cuda
 from MinstNet import MinstNet
 from ray import train, tune
-from optimize import  optimize_random_search
+from optimize import optimize_random_search
 
 
 def load_data(data_dir="./data"):
@@ -23,6 +23,18 @@ def load_data(data_dir="./data"):
     test_set = datasets.MNIST(data_dir, train=False, download=True, transform=transform)
 
     return train_set, test_set
+
+
+'''
+定义优化目标，基于轮数的优化测试
+基于ray tune的优化目标基本框架如下：
+def objective(config):
+    1. 使用config传入的超参数训练模型
+    2. 使用评价函数对模型进行评价
+    3. 在每轮使用tune.report告知tuner本轮的训练结果（可以是loss或者准确度）
+    使用while Ture循环训练的目的是可以使用stop={"training_iteration": epochs}告知tuner每次尝试的最大轮数
+    已经封装，只需对optimize函数传入max_iter即可
+'''
 
 
 def train_minst(config, data_dir=None):
@@ -100,13 +112,13 @@ if __name__ == '__main__':
 
     # 随机搜索
     results = optimize_random_search(
-        objective=partial(train_minst, data_dir=data_dir),   # 目标函数，partial为传递除config以外的其它参数
+        objective=partial(train_minst, data_dir=data_dir),  # 目标函数，partial为传递除config以外的其它参数
         config=config,  # 目标超参数搜索空间
         metric="test_accuracy",  # 优化目标变量
         mode="max",  # 优化模式，可选max/min
         n_samples=20,  # 采样点个数
         max_iter=10,  # 最大迭代次数
         scheduler=None,  # 引入的算法调度器，实现早期不良训练的淘汰
-        cpus_per_trial=1,   # 每个实验分配的cpu资源
+        cpus_per_trial=1,  # 每个实验分配的cpu资源
         gpus_per_trial=0.2,  # 每个实验分配的gpu资源
     )

@@ -24,7 +24,18 @@ def load_data(data_dir="./data"):
 
     return train_set, test_set
 
-
+'''
+定义优化目标，基于轮数的优化测试
+基于ray tune的优化目标基本框架如下：
+def objective(config):
+    1. 使用config传入的超参数训练模型
+    2. 使用评价函数对模型进行评价
+    3. 在每轮使用tune.report告知tuner本轮的训练结果（可以是loss或者准确度）
+    使用while Ture循环训练的目的是可以使用stop={"training_iteration": epochs}告知tuner每次尝试的最大轮数
+    已经封装，只需对optimize函数传入max_iter即可
+    PBT算法需要进行checkpoint保存与读取的编写，详情查看
+    https://docs.ray.io/en/latest/tune/examples/pbt_guide.html
+'''
 def train_minst_with_checkpoint(config, data_dir=None):
     """
     训练MINST神经网络模型，并且报告loss与验证集上的精确度
@@ -50,8 +61,11 @@ def train_minst_with_checkpoint(config, data_dir=None):
             model_state, optimizer_state = torch.load(
                 os.path.join(checkpoint_dir, "checkpoint.pt")
             )
+            # Load model state and iteration step from checkpoint.
             minst_net.load_state_dict(model_state)
             optimizer.load_state_dict(optimizer_state)
+            # Load optimizer state (needed since we're using momentum),
+            # then set the `lr` and `momentum` according to the config.
             for param_group in optimizer.param_groups:
                 if "lr" in config:
                     param_group["lr"] = config["lr"]
@@ -128,9 +142,9 @@ if __name__ == '__main__':
         mode='max',
         n_samples=20,
         max_iter=10,
-        checkpoint_keep_num=7,
-        perturbation_interval=2,
-        cpus_per_trial=1,
+        checkpoint_keep_num=7,    # 保存的检查点
+        perturbation_interval=2,  # 突变/扰动轮数间隔
+        cpus_per_trial=1,  #
         gpus_per_trial=0.2,
     )
 
