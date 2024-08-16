@@ -24,6 +24,7 @@ def load_data(data_dir="./data"):
 
     return train_set, test_set
 
+
 '''
 定义优化目标，基于轮数的优化测试
 基于ray tune的优化目标基本框架如下：
@@ -36,13 +37,15 @@ def objective(config):
     PBT算法需要进行checkpoint保存与读取的编写，详情查看
     https://docs.ray.io/en/latest/tune/examples/pbt_guide.html
 '''
+
+
 def train_minst_with_checkpoint(config, data_dir=None):
     """
     训练MINST神经网络模型，并且报告loss与验证集上的精确度
     :param config: 调优参数以及待传递参数
     """
     # 实例化模型
-    minst_net = MinstNet(l1=256, l2=32)
+    minst_net = MinstNet(l1=config["l1"], l2=config["l2"])
     # 适配训练设备，测试节点是否为单机多卡
     device = "cpu"
     if torch.cuda.is_available():
@@ -52,17 +55,18 @@ def train_minst_with_checkpoint(config, data_dir=None):
     minst_net.to(device)
     # 定义损失函数与优化器
     lossF = nn.CrossEntropyLoss()  # 损失函数为交叉熵
-    optimizer = optim.SGD(minst_net.parameters(), lr=config['lr'], momentum=config['momentum'])  # 优化器
+    optimizer = optim.SGD(minst_net.parameters(), lr=config['lr'])  # 优化器
 
     # If `train.get_checkpoint()` is populated,
     # then we are resuming from a checkpoint.
     if train.get_checkpoint():
         with train.get_checkpoint().as_directory() as checkpoint_dir:
-            model_state, optimizer_state = torch.load(
-                os.path.join(checkpoint_dir, "checkpoint.pt")
+            # 加载模型与参数
+            minst_net, optimizer_state = torch.load(
+                os.path.join(checkpoint_dir, "checkpoint.pt"),
+                map_location=device
             )
-            # Load model state and iteration step from checkpoint.
-            minst_net.load_state_dict(model_state)
+            # Load state and iteration step from checkpoint.
             optimizer.load_state_dict(optimizer_state)
             # Load optimizer state (needed since we're using momentum),
             # then set the `lr` and `momentum` according to the config.
@@ -115,7 +119,7 @@ def train_minst_with_checkpoint(config, data_dir=None):
         with tempfile.TemporaryDirectory() as temp_checkpoint_dir:
             path = os.path.join(temp_checkpoint_dir, "checkpoint.pt")
             torch.save(
-                (minst_net.state_dict(), optimizer.state_dict()), path
+                (minst_net, optimizer.state_dict()), path
             )
             checkpoint = Checkpoint.from_directory(temp_checkpoint_dir)
             train.report(
@@ -130,14 +134,19 @@ if __name__ == '__main__':
     load_data(data_dir)
 
     config = {
+        "l1": tune.choice([512, 256, 128]),
+        "l2": tune.choice([64, 32, 16]),
         "lr": tune.loguniform(0.001, 0.1),
-        "momentum": tune.uniform(0.1, 0.5),
+    }
+
+    hyperparam_mutations = {
+        "lr": tune.loguniform(0.001, 0.1),
     }
 
     results, best_config = optimize_pbt_search(
         objective=partial(train_minst_with_checkpoint, data_dir=data_dir),  # 目标函数，partial为传递除config以外的其它参数
         config=config,  # 目标超参数搜索空间（包含常量）
-        hyperparameters=config,  # 目标超参数搜索空间（不包含常量）
+        hyperparam_mutations=hyperparam_mutations,  # 可突变的超参数空间，用于在explore时进行突变
         metric='test_accuracy',  # 优化目标变量
         mode='max',  # 优化模式，可选max/min
         n_samples=20,  # 采样点个数

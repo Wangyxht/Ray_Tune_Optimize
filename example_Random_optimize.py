@@ -55,8 +55,8 @@ def train_minst(config, data_dir=None):
 
     # 获取数据集
     train_set, test_set = load_data(data_dir=data_dir)
-    train_dataloader = DataLoader(dataset=train_set, batch_size=config['batch_size'], shuffle=True)
-    test_dataloader = DataLoader(dataset=test_set, batch_size=config['batch_size'])
+    train_dataloader = DataLoader(dataset=train_set, batch_size=64, shuffle=True)
+    test_dataloader = DataLoader(dataset=test_set, batch_size=64)
 
     # 定义损失函数与优化器
     lossF = nn.CrossEntropyLoss()  # 损失函数为交叉熵
@@ -104,12 +104,10 @@ if __name__ == '__main__':
     load_data(data_dir)
     # 定义超参数空间
     config = {
-        "l1": tune.choice([512, 256]),  # 第一隐藏层节点数
-        "l2": tune.choice([128, 64, 32, 16]),  # 第二隐藏层节点数
-        "lr": tune.uniform(0.01, 0.1),  # 学习率
-        "batch_size": 64,
+        "l1": tune.choice([512, 256, 128]),
+        "l2": tune.choice([64, 32, 16]),
+        "lr": tune.loguniform(0.001, 0.1),
     }
-
     # 随机搜索
     results = optimize_random_search(
         objective=partial(train_minst, data_dir=data_dir),  # 目标函数，partial为传递除config以外的其它参数

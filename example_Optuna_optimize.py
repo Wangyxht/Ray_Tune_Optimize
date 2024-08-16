@@ -54,8 +54,8 @@ def train_minst(config, data_dir=None):
 
     # 获取数据集
     train_set, test_set = load_data(data_dir=data_dir)
-    train_dataloader = DataLoader(dataset=train_set, batch_size=config['batch_size'], shuffle=True)
-    test_dataloader = DataLoader(dataset=test_set, batch_size=config['batch_size'])
+    train_dataloader = DataLoader(dataset=train_set, batch_size=64, shuffle=True)
+    test_dataloader = DataLoader(dataset=test_set, batch_size=64)
 
     # 定义损失函数与优化器
     lossF = nn.CrossEntropyLoss()  # 损失函数为交叉熵
@@ -64,7 +64,7 @@ def train_minst(config, data_dir=None):
     while True:
         # 训练模型
         total_loss = 0
-        minst_net.train(True)
+        minst_net.train()
         for _, (images, labels) in enumerate(train_dataloader):
             images, labels = images.to(device), labels.to(device)
             minst_net.zero_grad()
@@ -75,7 +75,7 @@ def train_minst(config, data_dir=None):
             optimizer.step()
 
         # 验证模型
-        minst_net.train(False)
+        minst_net.eval()
         total_accuracy = 0
         test_loss = 0
         with torch.no_grad():
@@ -102,10 +102,9 @@ if __name__ == '__main__':
     data_dir = os.path.abspath("./data")
     load_data(data_dir)
     config = {
-        "l1": tune.choice([512, 256, 128]),  # 第一隐藏层节点数
-        "l2": tune.choice([64, 32, 16]),  # 第二隐藏层节点数
-        "lr": tune.loguniform(0.001, 0.1),  # 学习率
-        "batch_size": 64,
+        "l1": tune.choice([512, 256, 128]),
+        "l2": tune.choice([64, 32, 16]),
+        "lr": tune.loguniform(0.001, 0.1),
     }
 
     # 基于Optuna库的贝叶斯搜索（TPE/GP采样过程）
@@ -114,14 +113,10 @@ if __name__ == '__main__':
         config=config,  # 目标超参数搜索空间
         metric="test_accuracy",  # 优化目标变量
         mode="max",  # 优化模式，可选max/min
-        points_to_evaluate=[    # 设定初始实验的超参数，前n次实验将按照如下超参数进行
-            {"l1": 128, "l2": 32, "lr": 0.08},
-            {"l1": 128, "l2": 32, "lr": 0.09},
-            {"l1": 128, "l2": 32, "lr": 0.1}
-        ],
+        points_to_evaluate=None,    # 设定初始实验的超参数，前n次实验将按照如下超参数进行,
         n_samples=20,  # 采样点个数
         max_iter=10,  # 最大迭代次数
-        optuna_sampler='TPE',  # 采样过程，默认为TPE（TPE优化）,可选GP（高斯过程）
+        optuna_sampler='TPE',  # 采样过程，默认为TPE（TPE优化）,可选GP（高斯过程优化）
         scheduler='ASHA',  # 引入的算法调度器，实现早期不良训练的淘汰
         grace_period=2,  # 最小训练轮数，起始2轮后开始淘汰，2轮前ASHA不介入
         reduce_factor=2,  # 淘汰率,即论文/伪代码中的eta

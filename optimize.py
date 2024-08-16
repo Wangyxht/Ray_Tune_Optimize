@@ -15,21 +15,21 @@ def optimize_random_search(
         max_iter: int = 10,
         scheduler: str = None,
         grace_period: int = 1,
-        reduce_factor: float = 3,
-        cpus_per_trial: float = 1,
-        gpus_per_trial: float = 1,
+        reduce_factor: float = 3.0,
+        cpus_per_trial: float = 1.0,
+        gpus_per_trial: float = 1.0,
 ):
     """
     随机/网格搜索超参数优化
-    :param reduce_factor:
-    :param grace_period:
-    :param scheduler: 用于实现Hyperband或者ASHA算法的调度器
     :param objective: 目标函数
     :param config: 搜索空间以及传递的的参数
     :param metric: 优化目标量,需要与目标函数report的变量名一致
     :param mode: 优化模式,可取max、min
     :param n_samples: 采样点个数
     :param max_iter: 训练轮数
+    :param scheduler: 用于实现Hyperband或者ASHA算法的调度器
+    :param reduce_factor: 淘汰率，每次报告参数时前1/Reduce_factor的实验将会被保留
+    :param grace_period: 最小训练轮数，如果为2则起始2轮后开始淘汰，2轮前ASHA不介入
     :param cpus_per_trial: 每个实验的CPU资源
     :param gpus_per_trial: 每个实验的GPU资源
     :return: 最优参数
@@ -42,8 +42,6 @@ def optimize_random_search(
         raise ValueError("优化目标metric或优化模式mode未指定")
     if mode not in ["max", "min"]:
         raise ValueError("优化模式mode取值范围为min/max")
-    if scheduler is None and grace_period is not None and reduce_factor is not None:
-        raise ValueError("指定grace_period reduce_factor参数需要指定调度器scheduler")
 
     trainable_with_resources = tune.with_resources(
         trainable=objective,
@@ -84,7 +82,7 @@ def optimize_random_search(
 def optimize_pbt_search(
         objective=None,
         config: dict = None,
-        hyperparameters: dict = None,
+        hyperparam_mutations: dict = None,
         metric: str = None,
         mode: str = None,
         n_samples: int = 10,
@@ -96,8 +94,8 @@ def optimize_pbt_search(
     """
     PBT 种群优化搜索，一般用于迭代次数相关模型的超参数优化
     :param objective: 目标函数
-    :param hyperparameters:超参数空间
-    :param config: 搜索空间以及传递的的参数
+    :param config: 超参数搜索空间
+    :param hyperparam_mutations: 定义可以突变的超参数空间，即config当中可以在explore时突变的超参数
     :param metric: 优化目标量,需要与目标函数report的变量名一致
     :param mode: 优化模式,可取max、min
     :param n_samples: 采样点个数。
@@ -119,13 +117,13 @@ def optimize_pbt_search(
         perturbation_interval=perturbation_interval,
         metric=metric,
         mode=mode,
-        hyperparam_mutations=hyperparameters,
+        hyperparam_mutations=hyperparam_mutations,
     )
 
     tuner = tune.Tuner(
         trainable=trainable_with_resources,
         run_config=train.RunConfig(
-
+            name="train",
             stop={"training_iteration": max_iter},
             checkpoint_config=train.CheckpointConfig(
                 checkpoint_score_attribute=metric,
@@ -160,8 +158,7 @@ def optimize_optuna_search(
         gpus_per_trial: float = 1,
 ):
     """
-    基于Optuna的贝叶斯超参数优化,Optuna库默认使用基于TPE的贝叶斯优化
-    :param scheduler:
+    基于Optuna的贝叶斯超参数优化（Optuna库默认使用基于TPE的贝叶斯优化）
     :param objective: 目标函数
     :param metric: 优化目标量,需要与目标函数report的变量名一致
     :param mode: 优化模式,可取max、min
@@ -169,6 +166,9 @@ def optimize_optuna_search(
     :param n_samples: 采样点个数
     :param max_iter: 最大迭代次数
     :param points_to_evaluate: 设定初始值的点
+    :param scheduler: 用于实现Hyperband或者ASHA算法的调度器
+    :param reduce_factor: 淘汰率，每次报告参数时前1/Reduce_factor的实验将会被保留
+    :param grace_period: 最小训练轮数，如果为2则起始2轮后开始淘汰，2轮前ASHA不介入
     :param cpus_per_trial: 每个实验的CPU资源
     :param gpus_per_trial: 每个实验的GPU资源
     :param optuna_sampler: optuna采样器，用于确认采用的贝叶斯算法，默认为TPE,可选GP
@@ -182,8 +182,6 @@ def optimize_optuna_search(
         raise ValueError("优化目标metric或优化模式mode未指定")
     if mode not in ["max", "min"]:
         raise ValueError("优化模式mode取值范围为min/max")
-    if scheduler is None and grace_period is not None and reduce_factor is not None:
-        raise ValueError("指定grace_period reduce_factor参数需要指定调度器scheduler")
     if optuna_sampler is None:
         print("未指定optuna_sampler:Optuna默认采用TPE算法进行贝叶斯优化")
 
