@@ -6,7 +6,7 @@ import torch
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 from torch import nn, optim, cuda
-from MinstNet import MinstNet
+from MnistNet import MnistNet
 from ray import train, tune
 from optimize import optimize_optuna_search
 
@@ -36,13 +36,13 @@ def objective(config):
 '''
 
 
-def train_minst(config, data_dir=None):
+def train_mnist(config, data_dir=None):
     """
     训练MINST神经网络模型，并且报告loss与验证集上的精确度
     :param config: 调优参数以及待传递参数
     """
     # 实例化模型
-    minst_net = MinstNet(l1=config['l1'], l2=config['l2'])
+    minst_net = MnistNet(l1=config['l1'], l2=config['l2'])
 
     # 适配训练设备，测试节点是否为单机多卡
     device = "cpu"
@@ -109,7 +109,7 @@ if __name__ == '__main__':
 
     # 基于Optuna库的贝叶斯搜索（TPE/GP采样过程）
     results, best = optimize_optuna_search(
-        objective=partial(train_minst, data_dir=data_dir),  # 目标函数，partial为传递除config以外的其它参数
+        objective=partial(train_mnist, data_dir=data_dir),  # 目标函数，partial为传递除config以外的其它参数
         config=config,  # 目标超参数搜索空间
         metric="test_accuracy",  # 优化目标变量
         mode="max",  # 优化模式，可选max/min

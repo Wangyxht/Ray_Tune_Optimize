@@ -7,7 +7,7 @@ from ray.train import Checkpoint
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 from torch import nn, optim, cuda
-from MinstNet import MinstNet
+from MnistNet import MnistNet
 from ray import train, tune
 from optimize import optimize_pbt_search
 
@@ -39,13 +39,13 @@ def objective(config):
 '''
 
 
-def train_minst_with_checkpoint(config, data_dir=None):
+def train_mnist_with_checkpoint(config, data_dir=None):
     """
     训练MINST神经网络模型，并且报告loss与验证集上的精确度
     :param config: 调优参数以及待传递参数
     """
     # 实例化模型
-    minst_net = MinstNet(l1=config["l1"], l2=config["l2"])
+    minst_net = MnistNet(l1=config["l1"], l2=config["l2"])
     # 适配训练设备，测试节点是否为单机多卡
     device = "cpu"
     if torch.cuda.is_available():
@@ -144,7 +144,7 @@ if __name__ == '__main__':
     }
 
     results, best_config = optimize_pbt_search(
-        objective=partial(train_minst_with_checkpoint, data_dir=data_dir),  # 目标函数，partial为传递除config以外的其它参数
+        objective=partial(train_mnist_with_checkpoint, data_dir=data_dir),  # 目标函数，partial为传递除config以外的其它参数
         config=config,  # 目标超参数搜索空间（包含常量）
         hyperparam_mutations=hyperparam_mutations,  # 可突变的超参数空间，用于在explore时进行突变
         metric='test_accuracy',  # 优化目标变量
